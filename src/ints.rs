@@ -24,9 +24,26 @@ pub mod implementation {
         }
     }
 
+    impl<const BITS: u32> From<B8<BITS>> for u16 {
+        fn from(value: B8<BITS>) -> Self {
+            value.0 as u16
+        }
+    }
+
     impl<const BITS: u32> From<B8<BITS>> for u32 {
         fn from(value: B8<BITS>) -> Self {
             value.0 as u32
+        }
+    }
+
+    impl<const BITS: u32> From<B8<BITS>> for u64 {
+        fn from(value: B8<BITS>) -> Self {
+            value.0 as u64
+        }
+    }
+    impl<const BITS: u32> From<B8<BITS>> for u128 {
+        fn from(value: B8<BITS>) -> Self {
+            value.0 as u128
         }
     }
 
@@ -41,14 +58,44 @@ pub mod implementation {
             value.0
         }
     }
+    impl<const BITS: u32> From<B16<BITS>> for u32 {
+        fn from(value: B16<BITS>) -> Self {
+            value.0 as u32
+        }
+    }
+    impl<const BITS: u32> From<B16<BITS>> for u64 {
+        fn from(value: B16<BITS>) -> Self {
+            value.0 as u64
+        }
+    }
+    impl<const BITS: u32> From<B16<BITS>> for u128 {
+        fn from(value: B16<BITS>) -> Self {
+            value.0 as u128
+        }
+    }
     impl<const BITS: u32> From<B32<BITS>> for u32 {
         fn from(value: B32<BITS>) -> Self {
             value.0
         }
     }
+    impl<const BITS: u32> From<B32<BITS>> for u64 {
+        fn from(value: B32<BITS>) -> Self {
+            value.0 as u64
+        }
+    }
+    impl<const BITS: u32> From<B32<BITS>> for u128 {
+        fn from(value: B32<BITS>) -> Self {
+            value.0 as u128
+        }
+    }
     impl<const BITS: u32> From<B64<BITS>> for u64 {
         fn from(value: B64<BITS>) -> Self {
             value.0
+        }
+    }
+    impl<const BITS: u32> From<B64<BITS>> for u128 {
+        fn from(value: B64<BITS>) -> Self {
+            value.0 as u128
         }
     }
     impl<const BITS: u32> From<B128<BITS>> for u128 {
