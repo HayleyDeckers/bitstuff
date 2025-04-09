@@ -1,0 +1,7 @@
+[package]
+name = "bitstuff"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bitstuff-macros = { path = "macros" }
