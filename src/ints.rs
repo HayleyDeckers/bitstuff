@@ -1,140 +1,140 @@
 #![allow(non_camel_case_types)]
 
 pub mod implementation {
+    use core::ops::Deref;
     use core::panic;
-    use std::ops::Deref;
 
     use crate::BitRepr;
     //standard bit types that can contain 0..2^BITS
     // we might also want to a variant which can contain 0..=MAX which is used for some peripherals like AUX_MU_STAT_REG on bcm2711
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct B8<const BITS: u32>(u8);
+    pub struct B8<const BITS: u8>(u8);
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct B16<const BITS: u32>(u16);
+    pub struct B16<const BITS: u8>(u16);
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct B32<const BITS: u32>(u32);
+    pub struct B32<const BITS: u8>(u32);
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct B64<const BITS: u32>(u64);
+    pub struct B64<const BITS: u8>(u64);
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct B128<const BITS: u32>(u128);
+    pub struct B128<const BITS: u8>(u128);
 
-    impl<const BITS: u32> From<B8<BITS>> for u8 {
+    impl<const BITS: u8> From<B8<BITS>> for u8 {
         fn from(value: B8<BITS>) -> Self {
             value.0
         }
     }
 
-    impl<const BITS: u32> From<B8<BITS>> for u16 {
+    impl<const BITS: u8> From<B8<BITS>> for u16 {
         fn from(value: B8<BITS>) -> Self {
             value.0 as u16
         }
     }
 
-    impl<const BITS: u32> From<B8<BITS>> for u32 {
+    impl<const BITS: u8> From<B8<BITS>> for u32 {
         fn from(value: B8<BITS>) -> Self {
             value.0 as u32
         }
     }
 
-    impl<const BITS: u32> From<B8<BITS>> for u64 {
+    impl<const BITS: u8> From<B8<BITS>> for u64 {
         fn from(value: B8<BITS>) -> Self {
             value.0 as u64
         }
     }
-    impl<const BITS: u32> From<B8<BITS>> for u128 {
+    impl<const BITS: u8> From<B8<BITS>> for u128 {
         fn from(value: B8<BITS>) -> Self {
             value.0 as u128
         }
     }
 
-    // impl<const BITS: u32> FromBits<u8> for B8<BITS> {
+    // impl<const BITS: u8> FromBits<u8> for B8<BITS> {
     //     fn from_bits(value: u8) -> Self {
     //         Self::trimmed_new(value)
     //     }
     // }
 
-    impl<const BITS: u32> From<B16<BITS>> for u16 {
+    impl<const BITS: u8> From<B16<BITS>> for u16 {
         fn from(value: B16<BITS>) -> Self {
             value.0
         }
     }
-    impl<const BITS: u32> From<B16<BITS>> for u32 {
+    impl<const BITS: u8> From<B16<BITS>> for u32 {
         fn from(value: B16<BITS>) -> Self {
             value.0 as u32
         }
     }
-    impl<const BITS: u32> From<B16<BITS>> for u64 {
+    impl<const BITS: u8> From<B16<BITS>> for u64 {
         fn from(value: B16<BITS>) -> Self {
             value.0 as u64
         }
     }
-    impl<const BITS: u32> From<B16<BITS>> for u128 {
+    impl<const BITS: u8> From<B16<BITS>> for u128 {
         fn from(value: B16<BITS>) -> Self {
             value.0 as u128
         }
     }
-    impl<const BITS: u32> From<B32<BITS>> for u32 {
+    impl<const BITS: u8> From<B32<BITS>> for u32 {
         fn from(value: B32<BITS>) -> Self {
             value.0
         }
     }
-    impl<const BITS: u32> From<B32<BITS>> for u64 {
+    impl<const BITS: u8> From<B32<BITS>> for u64 {
         fn from(value: B32<BITS>) -> Self {
             value.0 as u64
         }
     }
-    impl<const BITS: u32> From<B32<BITS>> for u128 {
+    impl<const BITS: u8> From<B32<BITS>> for u128 {
         fn from(value: B32<BITS>) -> Self {
             value.0 as u128
         }
     }
-    impl<const BITS: u32> From<B64<BITS>> for u64 {
+    impl<const BITS: u8> From<B64<BITS>> for u64 {
         fn from(value: B64<BITS>) -> Self {
             value.0
         }
     }
-    impl<const BITS: u32> From<B64<BITS>> for u128 {
+    impl<const BITS: u8> From<B64<BITS>> for u128 {
         fn from(value: B64<BITS>) -> Self {
             value.0 as u128
         }
     }
-    impl<const BITS: u32> From<B128<BITS>> for u128 {
+    impl<const BITS: u8> From<B128<BITS>> for u128 {
         fn from(value: B128<BITS>) -> Self {
             value.0
         }
     }
-    impl<const BITS: u32> Deref for B8<BITS> {
+    impl<const BITS: u8> Deref for B8<BITS> {
         type Target = u8;
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
-    impl<const BITS: u32> Deref for B16<BITS> {
+    impl<const BITS: u8> Deref for B16<BITS> {
         type Target = u16;
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
-    impl<const BITS: u32> Deref for B32<BITS> {
+    impl<const BITS: u8> Deref for B32<BITS> {
         type Target = u32;
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
-    impl<const BITS: u32> Deref for B64<BITS> {
+    impl<const BITS: u8> Deref for B64<BITS> {
         type Target = u64;
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
-    impl<const BITS: u32> Deref for B128<BITS> {
+    impl<const BITS: u8> Deref for B128<BITS> {
         type Target = u128;
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
 
-    impl<const BITS: u32> B8<BITS> {
+    impl<const BITS: u8> B8<BITS> {
         pub fn inner(&self) -> u8 {
             self.0
         }
@@ -166,7 +166,7 @@ pub mod implementation {
         }
     }
 
-    impl<const BITS: u32> B16<BITS> {
+    impl<const BITS: u8> B16<BITS> {
         pub const fn try_new(value: u16) -> Result<Self, u16> {
             if BITS == 0 || BITS >= 16 {
                 return Err(value);
@@ -195,7 +195,7 @@ pub mod implementation {
         }
     }
 
-    impl<const BITS: u32> B32<BITS> {
+    impl<const BITS: u8> B32<BITS> {
         pub const fn try_new(value: u32) -> Result<Self, u32> {
             if BITS == 0 || BITS >= 32 {
                 return Err(value);
@@ -223,7 +223,7 @@ pub mod implementation {
             Self(value & mask)
         }
     }
-    impl<const BITS: u32> B64<BITS> {
+    impl<const BITS: u8> B64<BITS> {
         pub const fn try_new(value: u64) -> Result<Self, u64> {
             if BITS == 0 || BITS >= 64 {
                 return Err(value);
@@ -252,7 +252,7 @@ pub mod implementation {
             Self(value & mask)
         }
     }
-    impl<const BITS: u32> B128<BITS> {
+    impl<const BITS: u8> B128<BITS> {
         pub const fn try_new(value: u128) -> Result<Self, u128> {
             if BITS == 0 || BITS >= 128 {
                 return Err(value);
@@ -281,44 +281,44 @@ pub mod implementation {
         }
     }
 
-    impl<const BITS: u32> BitRepr for B8<BITS> {
+    impl<const BITS: u8> BitRepr for B8<BITS> {
         type BitRepr = Self;
     }
-    impl<const BITS: u32> BitRepr for B16<BITS> {
+    impl<const BITS: u8> BitRepr for B16<BITS> {
         type BitRepr = Self;
     }
-    impl<const BITS: u32> BitRepr for B32<BITS> {
+    impl<const BITS: u8> BitRepr for B32<BITS> {
         type BitRepr = Self;
     }
-    impl<const BITS: u32> BitRepr for B64<BITS> {
+    impl<const BITS: u8> BitRepr for B64<BITS> {
         type BitRepr = Self;
     }
-    impl<const BITS: u32> BitRepr for B128<BITS> {
+    impl<const BITS: u8> BitRepr for B128<BITS> {
         type BitRepr = Self;
     }
 
-    // impl<const BITS: u32> TryFromBits<u8> for B8<BITS> {
+    // impl<const BITS: u8> TryFromBits<u8> for B8<BITS> {
     //     fn try_from_bits(bits: u8) -> Result<Self, u8> {
     //         Self::try_new(bits)
     //     }
     // }
 
-    // impl<const BITS: u32> TryFromBits<u16> for B16<BITS> {
+    // impl<const BITS: u8> TryFromBits<u16> for B16<BITS> {
     //     fn try_from_bits(bits: u16) -> Result<Self, u16> {
     //         Self::try_new(bits)
     //     }
     // }
-    // impl<const BITS: u32> TryFromBits<u32> for B32<BITS> {
+    // impl<const BITS: u8> TryFromBits<u32> for B32<BITS> {
     //     fn try_from_bits(bits: u32) -> Result<Self, u32> {
     //         Self::try_new(bits)
     //     }
     // }
-    // impl<const BITS: u32> TryFromBits<u64> for B64<BITS> {
+    // impl<const BITS: u8> TryFromBits<u64> for B64<BITS> {
     //     fn try_from_bits(bits: u64) -> Result<Self, u64> {
     //         Self::try_new(bits)
     //     }
     // }
-    // impl<const BITS: u32> TryFromBits<u128> for B128<BITS> {
+    // impl<const BITS: u8> TryFromBits<u128> for B128<BITS> {
     //     fn try_from_bits(bits: u128) -> Result<Self, u128> {
     //         Self::try_new(bits)
     //     }

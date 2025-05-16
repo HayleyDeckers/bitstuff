@@ -1,5 +1,6 @@
+#![no_std]
 pub mod ints;
-use std::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8};
+use core::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8};
 
 pub use bitstuff_macros::*;
 use ints::u1;
