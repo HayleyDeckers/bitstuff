@@ -4,7 +4,7 @@ pub mod implementation {
     use core::panic;
     use std::ops::Deref;
 
-    use crate::{Bits, FromBits, FromLowBits, ToBits, TryFromBits};
+    use crate::BitRepr;
     //standard bit types that can contain 0..2^BITS
     // we might also want to a variant which can contain 0..=MAX which is used for some peripherals like AUX_MU_STAT_REG on bcm2711
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,11 +47,11 @@ pub mod implementation {
         }
     }
 
-    impl<const BITS: u32> FromLowBits<u8> for B8<BITS> {
-        fn from_low_bits(value: u8) -> Self {
-            Self::trimmed_new(value)
-        }
-    }
+    // impl<const BITS: u32> FromBits<u8> for B8<BITS> {
+    //     fn from_bits(value: u8) -> Self {
+    //         Self::trimmed_new(value)
+    //     }
+    // }
 
     impl<const BITS: u32> From<B16<BITS>> for u16 {
         fn from(value: B16<BITS>) -> Self {
@@ -135,6 +135,9 @@ pub mod implementation {
     }
 
     impl<const BITS: u32> B8<BITS> {
+        pub fn inner(&self) -> u8 {
+            self.0
+        }
         pub const fn try_new(value: u8) -> Result<Self, u8> {
             if BITS == 0 || BITS >= 8 {
                 return Err(value);
@@ -191,6 +194,7 @@ pub mod implementation {
             Self(value & mask)
         }
     }
+
     impl<const BITS: u32> B32<BITS> {
         pub const fn try_new(value: u32) -> Result<Self, u32> {
             if BITS == 0 || BITS >= 32 {
@@ -277,114 +281,48 @@ pub mod implementation {
         }
     }
 
-    impl<const BITS: u32> Bits for B8<BITS> {
-        const N_BITS: u32 = BITS;
+    impl<const BITS: u32> BitRepr for B8<BITS> {
+        type BitRepr = Self;
     }
-    impl<const BITS: u32> Bits for B16<BITS> {
-        const N_BITS: u32 = BITS;
+    impl<const BITS: u32> BitRepr for B16<BITS> {
+        type BitRepr = Self;
     }
-    impl<const BITS: u32> Bits for B32<BITS> {
-        const N_BITS: u32 = BITS;
+    impl<const BITS: u32> BitRepr for B32<BITS> {
+        type BitRepr = Self;
     }
-    impl<const BITS: u32> Bits for B64<BITS> {
-        const N_BITS: u32 = BITS;
+    impl<const BITS: u32> BitRepr for B64<BITS> {
+        type BitRepr = Self;
     }
-    impl<const BITS: u32> Bits for B128<BITS> {
-        const N_BITS: u32 = BITS;
-    }
-    // these types implement from bits instead of try_from_bits
-    //  because they always pick the lowest N bits ignoring the rest just like u8, u16, u32, u64, u128
-    impl<const BITS: u32> FromBits for B8<BITS> {
-        type From = u8;
-        fn from_bits(bits: u8) -> Self {
-            Self::trimmed_new(bits)
-        }
-    }
-    impl<const BITS: u32> FromBits for B16<BITS> {
-        type From = u16;
-        fn from_bits(bits: u16) -> Self {
-            Self::trimmed_new(bits)
-        }
-    }
-    impl<const BITS: u32> FromBits for B32<BITS> {
-        type From = u32;
-        fn from_bits(bits: u32) -> Self {
-            Self::trimmed_new(bits)
-        }
-    }
-    impl<const BITS: u32> FromBits for B64<BITS> {
-        type From = u64;
-        fn from_bits(bits: u64) -> Self {
-            Self::trimmed_new(bits)
-        }
-    }
-    impl<const BITS: u32> FromBits for B128<BITS> {
-        type From = u128;
-        fn from_bits(bits: u128) -> Self {
-            Self::trimmed_new(bits)
-        }
-    }
-    impl<const BITS: u32> ToBits for B8<BITS> {
-        type To = u8;
-        fn to_bits(self) -> u8 {
-            self.0
-        }
-    }
-    impl<const BITS: u32> ToBits for B16<BITS> {
-        type To = u16;
-        fn to_bits(self) -> u16 {
-            self.0
-        }
-    }
-    impl<const BITS: u32> ToBits for B32<BITS> {
-        type To = u32;
-        fn to_bits(self) -> u32 {
-            self.0
-        }
-    }
-    impl<const BITS: u32> ToBits for B64<BITS> {
-        type To = u64;
-        fn to_bits(self) -> u64 {
-            self.0
-        }
-    }
-    impl<const BITS: u32> ToBits for B128<BITS> {
-        type To = u128;
-        fn to_bits(self) -> u128 {
-            self.0
-        }
+    impl<const BITS: u32> BitRepr for B128<BITS> {
+        type BitRepr = Self;
     }
 
-    impl<const BITS: u32> TryFromBits for B8<BITS> {
-        type From = u8;
-        fn try_from_bits(bits: u8) -> Result<Self, u8> {
-            Self::try_new(bits)
-        }
-    }
-    impl<const BITS: u32> TryFromBits for B16<BITS> {
-        type From = u16;
-        fn try_from_bits(bits: u16) -> Result<Self, u16> {
-            Self::try_new(bits)
-        }
-    }
-    impl<const BITS: u32> TryFromBits for B32<BITS> {
-        type From = u32;
-        fn try_from_bits(bits: u32) -> Result<Self, u32> {
-            Self::try_new(bits)
-        }
-    }
-    impl<const BITS: u32> TryFromBits for B64<BITS> {
-        type From = u64;
-        fn try_from_bits(bits: u64) -> Result<Self, u64> {
-            Self::try_new(bits)
-        }
-    }
-    impl<const BITS: u32> TryFromBits for B128<BITS> {
-        type From = u128;
-        fn try_from_bits(bits: u128) -> Result<Self, u128> {
-            Self::try_new(bits)
-        }
-    }
+    // impl<const BITS: u32> TryFromBits<u8> for B8<BITS> {
+    //     fn try_from_bits(bits: u8) -> Result<Self, u8> {
+    //         Self::try_new(bits)
+    //     }
+    // }
+
+    // impl<const BITS: u32> TryFromBits<u16> for B16<BITS> {
+    //     fn try_from_bits(bits: u16) -> Result<Self, u16> {
+    //         Self::try_new(bits)
+    //     }
+    // }
+    // impl<const BITS: u32> TryFromBits<u32> for B32<BITS> {
+    //     fn try_from_bits(bits: u32) -> Result<Self, u32> {
+    //         Self::try_new(bits)
+    //     }
+    // }
+    // impl<const BITS: u32> TryFromBits<u64> for B64<BITS> {
+    //     fn try_from_bits(bits: u64) -> Result<Self, u64> {
+    //         Self::try_new(bits)
+    //     }
+    // }
+    // impl<const BITS: u32> TryFromBits<u128> for B128<BITS> {
+    //     fn try_from_bits(bits: u128) -> Result<Self, u128> {
+    //         Self::try_new(bits)
+    //     }
+    // }
 }
 use implementation::*;
 pub type u1 = B8<1>;
@@ -394,7 +332,7 @@ pub type u4 = B8<4>;
 pub type u5 = B8<5>;
 pub type u6 = B8<6>;
 pub type u7 = B8<7>;
-// pub type u8 = B8<8>;
+pub type u8 = B8<8>;
 pub type u9 = B16<9>;
 pub type u10 = B16<10>;
 pub type u11 = B16<11>;

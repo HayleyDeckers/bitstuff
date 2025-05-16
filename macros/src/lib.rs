@@ -1,8 +1,7 @@
-use std::{ops::Range, str::FromStr};
-
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote, ToTokens};
+use proc_macro2::Span;
+use quote::{quote, ToTokens};
+use std::str::FromStr;
 use syn::Field;
 use syn::Fields;
 use syn::{
@@ -17,8 +16,6 @@ pub fn stuff(args: TokenStream, input: TokenStream) -> TokenStream {
     // if enum, we generate a field that can be put in the struct.
     // for the struct, the valid field are the primitive unsigned ints
     // a bool (if 1 bit), or an enum
-    //  if using an int or enum, the lower bits are used. In the future we might add
-    // B1, B2, BN fields, for bits or a "checked" arg.
     if let Ok(input) = syn::parse(input.clone()) {
         process_itemstruct(args, input)
     } else if let Ok(input) = syn::parse(input) {
@@ -28,22 +25,16 @@ pub fn stuff(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
-fn process_itemenum(args: TokenStream, input: ItemEnum) -> TokenStream {
+fn process_itemenum(_args: TokenStream, input: ItemEnum) -> TokenStream {
     let ItemEnum {
-        attrs,
-        vis,
-        enum_token,
-        ident,
-        generics,
-        brace_token,
-        variants,
+        ident, variants, ..
     } = input.clone();
     let mut all_discriminats = std::collections::BTreeMap::new();
     for variant in variants {
         let name = variant.ident;
         let value_expr = variant.discriminant.expect("needs explicit discriminant").1;
         let Expr::Lit(ExprLit {
-            attrs,
+            attrs: _,
             lit: Lit::Int(lit),
         }) = value_expr
         else {
@@ -62,17 +53,40 @@ fn process_itemenum(args: TokenStream, input: ItemEnum) -> TokenStream {
     let required_bits = 128 - max.leading_zeros();
     let is_complete = all_discriminats.len() == 1 << required_bits;
 
+    let is_core_type = matches!(required_bits, 8 | 16 | 32 | 64 | 128);
+
     let to_bits_type = Type::Verbatim(
         proc_macro2::TokenStream::from_str(&format!(
             "{}{required_bits}",
-            match required_bits {
-                8 | 16 | 32 | 64 | 128 => "::core::primitive::u",
-                _ => "::bitstuff::ints::u",
+            if is_core_type {
+                "::core::primitive::u"
+            } else {
+                "::bitstuff::ints::u"
             }
         ))
         .unwrap(),
     );
-
+    let repr_type = Type::Verbatim(
+        proc_macro2::TokenStream::from_str(&format!(
+            "u{}",
+            match required_bits {
+                x if x <= 8 => 8,
+                x if x <= 16 => 16,
+                x if x <= 32 => 32,
+                x if x <= 64 => 64,
+                x if x <= 128 => 128,
+                _ => panic!("unsupported type"),
+            }
+        ))
+        .unwrap(),
+    );
+    let to_bits_convert = if is_core_type {
+        proc_macro2::TokenStream::new()
+    } else {
+        quote! {
+            #to_bits_type::trimmed_new
+        }
+    };
     if is_complete {
         let to_bits_match_body = all_discriminats
             .iter()
@@ -90,11 +104,15 @@ fn process_itemenum(args: TokenStream, input: ItemEnum) -> TokenStream {
                 quote! { #value => Self::#ident,}
             })
             .collect::<proc_macro2::TokenStream>();
+
         TokenStream::from(quote! { #input
+
+            impl ::bitstuff::BitRepr for #ident {
+                type BitRepr = #to_bits_type;
+            }
             impl ::bitstuff::FromBits for #ident {
-                type From = #to_bits_type;
                 fn from_bits(value: #to_bits_type) -> Self {
-                    match <#to_bits_type as ::bitstuff::ToBits>::to_bits(value) {
+                    match #repr_type::from(value) {
                         #from_bits_match_body
                         _ => unreachable!(),
                     }
@@ -102,16 +120,12 @@ fn process_itemenum(args: TokenStream, input: ItemEnum) -> TokenStream {
             }
 
             impl ::bitstuff::ToBits for #ident {
-                type To = #to_bits_type;
                 fn to_bits(self) -> #to_bits_type {
-                    <#to_bits_type as ::bitstuff::FromBits>::from_bits(match self {
+                    #to_bits_convert(match self {
                         #to_bits_match_body
                     })
                 }
         }
-            impl ::bitstuff::Bits for #ident {
-                const N_BITS: u32 = #required_bits;
-            }
         })
     } else {
         let to_bits_match_body = all_discriminats
@@ -130,9 +144,8 @@ fn process_itemenum(args: TokenStream, input: ItemEnum) -> TokenStream {
             .collect::<proc_macro2::TokenStream>();
         TokenStream::from(quote! { #input
             impl ::bitstuff::TryFromBits for #ident {
-                type From = #to_bits_type;
                 fn try_from_bits(value: #to_bits_type) -> ::core::result::Result<Self,#to_bits_type> {
-                    match <#to_bits_type as ::bitstuff::ToBits>::to_bits(value) {
+                    match #repr_type::from(value) {
                         #from_bits_match_body
                         _ => Err(value),
                     }
@@ -140,31 +153,17 @@ fn process_itemenum(args: TokenStream, input: ItemEnum) -> TokenStream {
             }
 
             impl ::bitstuff::ToBits for #ident {
-                type To = #to_bits_type;
                 fn to_bits(self) -> #to_bits_type {
-                    <#to_bits_type as ::bitstuff::FromBits>::from_bits(match self {
+                    #to_bits_convert(match self {
                         #to_bits_match_body
                         })
                 }
             }
-            impl ::bitstuff::Bits for #ident {
-                const N_BITS: u32 = #required_bits;
+            impl ::bitstuff::BitRepr for #ident {
+                type BitRepr = #to_bits_type;
             }
         })
     }
-}
-
-/// what bit(s) are used for this field
-enum BitSpecifier {
-    Bit(u32),
-    Bits(Range<u32>),
-}
-
-/// what mode is this field (determines which functions to generate)
-enum Mode {
-    RW,
-    RO,
-    WO,
 }
 
 fn process_itemstruct(args: TokenStream, input: ItemStruct) -> TokenStream {
@@ -174,15 +173,15 @@ fn process_itemstruct(args: TokenStream, input: ItemStruct) -> TokenStream {
         struct_token,
         ident,
         generics,
-        fields:
-            Fields::Named(FieldsNamed {
-                brace_token,
-                named: named_fields,
-            }),
+        fields,
         semi_token,
-    } = input
+    } = input;
+    let Fields::Named(FieldsNamed {
+        brace_token,
+        named: named_fields,
+    }) = fields
     else {
-        panic!("only works on named fields");
+        panic!("only named fields supported")
     };
     let args = parse_macro_input!(args with Punctuated::<Meta, syn::Token![,]>::parse_terminated);
     let first_arg = args
@@ -324,18 +323,7 @@ fn process_itemstruct(args: TokenStream, input: ItemStruct) -> TokenStream {
                         panic!("overlapping bits");
                     }
                     set_write_bits |= bitmask;
-                    let error_message = format!(
-                        "{ident} ({}) has the wrong number of bits. Expected {n_bits} bits based on the 'bit(s)' attribute.",
-                        return_type.to_token_stream()
-                    );
-                    let check_bits = quote! {
-                        const {
-                            use ::bitstuff::Bits;
-                            if #return_type::N_BITS != #n_bits {
-                                panic!(#error_message);
-                            }
-                        }
-                    };
+
                     let with_function = Ident::new(&format!("with_{ident}"), ident.span());
 
                     let to_bits_type = Type::Verbatim(
@@ -348,18 +336,26 @@ fn process_itemstruct(args: TokenStream, input: ItemStruct) -> TokenStream {
                         ))
                         .unwrap(),
                     );
+                    // make a function call for the trimmed_new function
+
+                    let raw_bits_type = if !matches!(n_bits, 8 | 16 | 32 | 64 | 128) {
+                        proc_macro2::TokenStream::from_str(&format!(
+                            "::bitstuff::ints::u{n_bits}::trimmed_new((self.0 >> {start}) as _)",
+                        ))
+                    } else {
+                        proc_macro2::TokenStream::from_str(&format!("(self.0 >> {start}) as _",))
+                    }
+                    .unwrap();
                     functions.push(if !is_falliable{ quote! {
                         #(#attr_doc)*
                         #[inline(always)]
                         #(#attr_other)*
                         pub fn #ident(&self) -> #return_type {
-                            #check_bits
-                            <#return_type as ::bitstuff::FromBits>::from_bits(<<#return_type as ::bitstuff::FromBits>::From as ::bitstuff::FromLowBits::<_>>::from_low_bits(self.0 >> #start))
+                            <#return_type as ::bitstuff::FromBits>::from_bits(#raw_bits_type)
                         }
                         #[inline(always)]
                         #(#attr_other)*
                         pub fn #with_function(mut self, value: #return_type) -> Self {
-                            #check_bits
                             let value : #repr_type = <#return_type as ::bitstuff::ToBits>::to_bits(value).into();
                             self.0 = (self.0 & ! #bitmask_keep_with) | (value  << #start);
                             self
@@ -370,13 +366,12 @@ fn process_itemstruct(args: TokenStream, input: ItemStruct) -> TokenStream {
                             #[inline(always)]
                             #(#attr_other)*
                             pub fn #ident(&self) -> ::core::result::Result<#return_type, #to_bits_type> {
-                                #check_bits
-                                <#return_type as ::bitstuff::TryFromBits>::try_from_bits(<<#return_type as ::bitstuff::TryFromBits>::From as ::bitstuff::FromLowBits::<_>>::from_low_bits(self.0 >> #start))
+                                <#return_type as ::bitstuff::TryFromBits>::try_from_bits(#raw_bits_type)
                             }
                             #[inline(always)]
                             #(#attr_other)*
                             pub fn #with_function(mut self, value: #return_type) -> Self {
-                                #check_bits
+                                //todo: might be able to use FromBits here instead of From to keep the set of traits used smaller
                                 let value : #repr_type = <#return_type as ::bitstuff::ToBits>::to_bits(value).into();
                                 self.0 = (self.0 & ! #bitmask_keep_with) | (value  << #start);
                                 self

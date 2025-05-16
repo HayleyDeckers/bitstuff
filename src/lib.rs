@@ -2,279 +2,139 @@ pub mod ints;
 use std::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8};
 
 pub use bitstuff_macros::*;
+use ints::u1;
 
-pub trait FromLowBits<T> {
-    fn from_low_bits(bits: T) -> Self;
-}
-
-impl FromLowBits<u8> for bool {
-    fn from_low_bits(bits: u8) -> Self {
-        bits & 1 != 0
-    }
+pub trait BitRepr {
+    type BitRepr;
 }
 
-impl FromLowBits<u8> for u8 {
-    fn from_low_bits(bits: u8) -> Self {
-        bits
-    }
+pub trait FromBits: BitRepr {
+    fn from_bits(bits: Self::BitRepr) -> Self;
 }
-impl FromLowBits<u16> for u16 {
-    fn from_low_bits(bits: u16) -> Self {
-        bits
-    }
-}
-impl FromLowBits<u32> for u32 {
-    fn from_low_bits(bits: u32) -> Self {
-        bits
-    }
-}
-impl FromLowBits<u64> for u64 {
-    fn from_low_bits(bits: u64) -> Self {
-        bits
-    }
-}
-impl FromLowBits<u128> for u128 {
-    fn from_low_bits(bits: u128) -> Self {
-        bits
-    }
-}
-impl<T> FromLowBits<u128> for T
+
+impl<T> FromBits for T
 where
-    T: FromLowBits<u64>,
+    T: BitRepr<BitRepr = T>,
 {
-    fn from_low_bits(bits: u128) -> Self {
-        T::from_low_bits(bits as u64)
-    }
-}
-impl<T> FromLowBits<u64> for T
-where
-    T: FromLowBits<u32>,
-{
-    fn from_low_bits(bits: u64) -> Self {
-        T::from_low_bits(bits as u32)
-    }
-}
-impl<T> FromLowBits<u32> for T
-where
-    T: FromLowBits<u16>,
-{
-    fn from_low_bits(bits: u32) -> Self {
-        T::from_low_bits(bits as u16)
-    }
-}
-impl<T> FromLowBits<u16> for T
-where
-    T: FromLowBits<u8>,
-{
-    fn from_low_bits(bits: u16) -> Self {
-        T::from_low_bits(bits as u8)
+    fn from_bits(bits: T::BitRepr) -> Self {
+        bits.into()
     }
 }
 
-pub trait Bits {
-    const N_BITS: u32;
+impl BitRepr for bool {
+    type BitRepr = u1;
+}
+impl BitRepr for u8 {
+    type BitRepr = u8;
+}
+impl BitRepr for u16 {
+    type BitRepr = u16;
+}
+impl BitRepr for u32 {
+    type BitRepr = u32;
+}
+impl BitRepr for u64 {
+    type BitRepr = u64;
+}
+impl BitRepr for u128 {
+    type BitRepr = u128;
+}
+impl BitRepr for NonZeroU8 {
+    type BitRepr = u8;
+}
+impl BitRepr for NonZeroU16 {
+    type BitRepr = u16;
+}
+impl BitRepr for NonZeroU32 {
+    type BitRepr = u32;
+}
+impl BitRepr for NonZeroU64 {
+    type BitRepr = u64;
+}
+impl BitRepr for NonZeroU128 {
+    type BitRepr = u128;
 }
 
-impl Bits for bool {
-    const N_BITS: u32 = 1;
-}
-impl Bits for u8 {
-    const N_BITS: u32 = 8;
-}
-
-impl Bits for u16 {
-    const N_BITS: u32 = 16;
-}
-
-impl Bits for u32 {
-    const N_BITS: u32 = 32;
-}
-
-impl Bits for u64 {
-    const N_BITS: u32 = 64;
-}
-
-impl Bits for u128 {
-    const N_BITS: u32 = 128;
-}
-
-pub trait ToBits: Bits {
-    type To;
-    fn to_bits(self) -> Self::To;
-}
-
-impl ToBits for u8 {
-    type To = u8;
-    fn to_bits(self) -> u8 {
-        self
-    }
-}
-
-impl ToBits for u16 {
-    type To = u16;
-    fn to_bits(self) -> u16 {
-        self
-    }
-}
-impl ToBits for u32 {
-    type To = u32;
-    fn to_bits(self) -> u32 {
-        self
-    }
-}
-impl ToBits for u64 {
-    type To = u64;
-    fn to_bits(self) -> u64 {
-        self
-    }
-}
-impl ToBits for u128 {
-    type To = u128;
-    fn to_bits(self) -> u128 {
-        self
-    }
-}
-impl ToBits for bool {
-    type To = u8;
-    fn to_bits(self) -> u8 {
-        if self {
-            1u8
-        } else {
-            0u8
-        }
-    }
-}
-
-pub trait FromBits: Bits {
-    type From;
-    fn from_bits(bits: Self::From) -> Self;
-}
-
-impl FromBits for u8 {
-    type From = u8;
-    fn from_bits(bits: u8) -> Self {
-        bits
-    }
-}
-impl FromBits for u16 {
-    type From = u16;
-    fn from_bits(bits: u16) -> Self {
-        bits
-    }
-}
-impl FromBits for u32 {
-    type From = u32;
-    fn from_bits(bits: u32) -> Self {
-        bits
-    }
-}
-impl FromBits for u64 {
-    type From = u64;
-    fn from_bits(bits: u64) -> Self {
-        bits
-    }
-}
-impl FromBits for u128 {
-    type From = u128;
-    fn from_bits(bits: u128) -> Self {
-        bits
-    }
-}
 impl FromBits for bool {
-    type From = u8;
-    fn from_bits(bits: u8) -> Self {
-        bits & 1 != 0
+    fn from_bits(bits: u1) -> Self {
+        *bits != 0
     }
 }
 
-pub trait TryFromBits: Bits + Sized {
-    type From;
-    fn try_from_bits(bits: Self::From) -> Result<Self, Self::From>;
+pub trait ToBits: BitRepr {
+    fn to_bits(self) -> Self::BitRepr;
 }
 
-impl<S: TryFromBits> Bits for Result<S, S::From> {
-    const N_BITS: u32 = S::N_BITS;
+impl<T> ToBits for T
+where
+    T: BitRepr<BitRepr = T>,
+{
+    fn to_bits(self) -> Self::BitRepr {
+        self
+    }
 }
 
-impl Bits for NonZeroU8 {
-    const N_BITS: u32 = 8;
+impl ToBits for bool {
+    fn to_bits(self) -> u1 {
+        u1::trimmed_new(self as u8)
+    }
+}
+
+pub trait TryFromBits: BitRepr + Sized {
+    fn try_from_bits(bits: Self::BitRepr) -> Result<Self, Self::BitRepr>;
 }
 
 impl TryFromBits for NonZeroU8 {
-    type From = u8;
-    fn try_from_bits(bits: u8) -> Result<Self, Self::From> {
+    fn try_from_bits(bits: u8) -> Result<Self, u8> {
         NonZeroU8::new(bits).ok_or(bits)
     }
 }
 
-impl Bits for NonZeroU16 {
-    const N_BITS: u32 = 16;
-}
-
 impl TryFromBits for NonZeroU16 {
-    type From = u16;
-    fn try_from_bits(bits: u16) -> Result<Self, Self::From> {
+    fn try_from_bits(bits: u16) -> Result<Self, u16> {
         NonZeroU16::new(bits).ok_or(bits)
     }
 }
-impl Bits for NonZeroU32 {
-    const N_BITS: u32 = 32;
-}
 
 impl TryFromBits for NonZeroU32 {
-    type From = u32;
-    fn try_from_bits(bits: u32) -> Result<Self, Self::From> {
+    fn try_from_bits(bits: u32) -> Result<Self, u32> {
         NonZeroU32::new(bits).ok_or(bits)
     }
 }
-impl Bits for NonZeroU64 {
-    const N_BITS: u32 = 64;
-}
 
 impl TryFromBits for NonZeroU64 {
-    type From = u64;
-    fn try_from_bits(bits: u64) -> Result<Self, Self::From> {
+    fn try_from_bits(bits: u64) -> Result<Self, u64> {
         NonZeroU64::new(bits).ok_or(bits)
     }
 }
 
-impl Bits for NonZeroU128 {
-    const N_BITS: u32 = 128;
-}
-
 impl TryFromBits for NonZeroU128 {
-    type From = u128;
-    fn try_from_bits(bits: u128) -> Result<Self, Self::From> {
+    fn try_from_bits(bits: u128) -> Result<Self, u128> {
         NonZeroU128::new(bits).ok_or(bits)
     }
 }
 
 impl ToBits for NonZeroU8 {
-    type To = u8;
     fn to_bits(self) -> u8 {
         self.get()
     }
 }
 impl ToBits for NonZeroU16 {
-    type To = u16;
     fn to_bits(self) -> u16 {
         self.get()
     }
 }
 impl ToBits for NonZeroU32 {
-    type To = u32;
     fn to_bits(self) -> u32 {
         self.get()
     }
 }
 impl ToBits for NonZeroU64 {
-    type To = u64;
     fn to_bits(self) -> u64 {
         self.get()
     }
 }
 impl ToBits for NonZeroU128 {
-    type To = u128;
     fn to_bits(self) -> u128 {
         self.get()
     }
