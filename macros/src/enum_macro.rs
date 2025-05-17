@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use quote::quote;
+use quote::{quote, quote_spanned};
 use std::str::FromStr;
 use syn::{parse::Parser, Expr, ExprLit, ItemEnum, Lit, LitInt, Meta};
 use syn::{punctuated::Punctuated, Type};
@@ -13,7 +13,7 @@ fn process_variant<'a>(variant: &'a syn::Variant) -> Result<(u128, syn::Ident), 
         Some((_, expr)) => expr,
         None => {
             return Err(syn::Error::new_spanned(
-                variant,
+                &variant.ident,
                 "Each enum variant must have an explicit discriminant (e.g. = 0)",
             ));
         }
@@ -120,7 +120,7 @@ pub fn process(args: TokenStream, input: ItemEnum) -> TokenStream {
                             format!("bits must be parseable as a u32: {e}"),
                         )
                         .to_compile_error()
-                        .into()
+                        .into();
                     }
                 };
                 explicit_bits = Some(bits);
@@ -190,14 +190,14 @@ pub fn process(args: TokenStream, input: ItemEnum) -> TokenStream {
             .iter()
             .map(|(value, ident)| {
                 let value = LitInt::new(&format!("{value}"), Span::call_site());
-                quote! {Self::#ident => #value,}
+                quote_spanned! { ident.span() => Self::#ident => #value, }
             })
             .collect::<proc_macro2::TokenStream>();
         let from_bits_match_body = all_discriminats
             .iter()
             .map(|(value, ident)| {
                 let value = LitInt::new(&format!("{value}"), Span::call_site());
-                quote! { #value => Self::#ident,}
+                quote_spanned! { ident.span() => #value => Self::#ident, }
             })
             .collect::<proc_macro2::TokenStream>();
 
@@ -228,14 +228,14 @@ pub fn process(args: TokenStream, input: ItemEnum) -> TokenStream {
             .iter()
             .map(|(value, ident)| {
                 let value = LitInt::new(&format!("{value}"), Span::call_site());
-                quote! {Self::#ident => #value,}
+                quote_spanned! { ident.span() => Self::#ident => #value, }
             })
             .collect::<proc_macro2::TokenStream>();
         let from_bits_match_body = all_discriminats
             .iter()
             .map(|(value, ident)| {
                 let value = LitInt::new(&format!("{value}"), Span::call_site());
-                quote! { #value => Ok(Self::#ident),}
+                quote_spanned! { ident.span() => #value => Ok(Self::#ident), }
             })
             .collect::<proc_macro2::TokenStream>();
         TokenStream::from(quote! { #input

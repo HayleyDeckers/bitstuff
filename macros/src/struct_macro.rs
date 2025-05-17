@@ -1,10 +1,10 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use quote::{quote, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use std::str::FromStr;
 use syn::{
-    parse_macro_input, token::Paren, Attribute, Expr, ExprLit, Fields, FieldsNamed, FieldsUnnamed,
-    Ident, ItemStruct, Lit, LitInt, Meta,
+    parse_macro_input, spanned::Spanned, token::Paren, Attribute, Expr, ExprLit, Fields,
+    FieldsNamed, FieldsUnnamed, Ident, ItemStruct, Lit, LitInt, Meta,
 };
 use syn::{punctuated::Punctuated, Type};
 
@@ -219,7 +219,7 @@ pub fn process_field(
     }
     .unwrap();
     Ok(if !is_falliable {
-        quote! {
+        quote_spanned! {field.span() =>
             #(#attr_doc)*
             #[inline(always)]
             #(#attr_other)*
@@ -235,7 +235,7 @@ pub fn process_field(
             }
         }
     } else {
-        quote! {
+        quote_spanned! {field.span() =>
             #(#attr_doc)*
             #[inline(always)]
             #(#attr_other)*
