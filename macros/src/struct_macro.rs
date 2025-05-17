@@ -8,6 +8,8 @@ use syn::{
 };
 use syn::{punctuated::Punctuated, Type};
 
+use super::MultipleErrors;
+
 /// Parses the repr type and returns (bit width, token stream)
 fn parse_repr_type(first_arg: &Ident) -> Result<(u32, proc_macro2::TokenStream), syn::Error> {
     let repr_bits = match first_arg.to_string().as_str() {
@@ -35,7 +37,7 @@ fn parse_bitstuff_attr(
     let args = attr
         .parse_args_with(Punctuated::<Meta, syn::Token![,]>::parse_terminated)
         .map_err(|e| syn::Error::new_spanned(attr, format!("failed to parse inner args: {e}")))?;
-    let is_falliable = args.iter().any(|x| x.path().is_ident("falliable"));
+    let mut is_falliable = false;
     let mut start = None;
     let mut end = None;
     for arg in &args {
@@ -114,7 +116,9 @@ fn parse_bitstuff_attr(
                     start = Some(s);
                     end = Some(e);
                 }
-                "falliable" => { /* already handled */ }
+                "falliable" => {
+                    is_falliable = true;
+                }
                 _ => {}
             }
         }
@@ -136,6 +140,117 @@ fn parse_bitstuff_attr(
 /// Computes the bitmask for a field
 fn bitmask(start: u32, n_bits: u32) -> u128 {
     (1u128.checked_shl(n_bits).unwrap_or(0).wrapping_sub(1)) << start
+}
+
+pub fn process_field(
+    field: syn::Field,
+    set_write_bits: &mut u128,
+    repr_type: &proc_macro2::TokenStream,
+    repr_bits: u32,
+    field_names: &mut Vec<Ident>,
+) -> Result<proc_macro2::TokenStream, syn::Error> {
+    let ident = match &field.ident {
+        Some(i) => i,
+        None => {
+            return Err(syn::Error::new_spanned(&field, "field needs an ident"));
+        }
+    };
+    field_names.push(ident.clone());
+    let return_type = &field.ty;
+    let mut attr_bitset = None;
+    let mut attr_doc = Vec::new();
+    let mut attr_other = Vec::new();
+    for attr in &field.attrs {
+        match attr.path().get_ident().map(Ident::to_string).as_deref() {
+            Some("bitstuff") => {
+                if attr_bitset.is_some() {
+                    return Err(syn::Error::new_spanned(
+                        attr,
+                        "only one bitstuff attr is supported",
+                    ));
+                } else {
+                    attr_bitset = Some(attr.clone());
+                }
+            }
+            Some("doc") => attr_doc.push(attr.clone()),
+            _ => attr_other.push(attr.clone()),
+        }
+    }
+    if attr_bitset.is_none() {
+        return Err(syn::Error::new_spanned(
+            &field,
+            "must have a single bitstuff attribute",
+        ));
+    }
+    let attr_bitset = attr_bitset.unwrap();
+    let (start, _end, n_bits, is_falliable) = match parse_bitstuff_attr(&attr_bitset, repr_bits) {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(e);
+        }
+    };
+    let bitmask_val = bitmask(start, n_bits);
+    let bitmask_keep_with = Lit::Int(LitInt::new(
+        &format!("0b{:b}", bitmask_val),
+        Span::call_site(),
+    ));
+    if *set_write_bits & bitmask_val != 0 {
+        return Err(syn::Error::new_spanned(&field, "overlapping bits"));
+    }
+    *set_write_bits |= bitmask_val;
+    let with_function = Ident::new(&format!("with_{ident}"), ident.span());
+    let to_bits_type = Type::Verbatim(
+        proc_macro2::TokenStream::from_str(&format!(
+            "{}{}",
+            match n_bits {
+                8 | 16 | 32 | 64 | 128 => "::core::primitive::u",
+                _ => "::bitstuff::ints::u",
+            },
+            n_bits
+        ))
+        .unwrap(),
+    );
+    let raw_bits_type = if !matches!(n_bits, 8 | 16 | 32 | 64 | 128) {
+        proc_macro2::TokenStream::from_str(&format!(
+            "::bitstuff::ints::u{n_bits}::trimmed_new((self.0 >> {start}) as _)"
+        ))
+    } else {
+        proc_macro2::TokenStream::from_str(&format!("(self.0 >> {start}) as _"))
+    }
+    .unwrap();
+    Ok(if !is_falliable {
+        quote! {
+            #(#attr_doc)*
+            #[inline(always)]
+            #(#attr_other)*
+            pub fn #ident(&self) -> #return_type {
+                <#return_type as ::bitstuff::FromBits>::from_bits(#raw_bits_type)
+            }
+            #[inline(always)]
+            #(#attr_other)*
+            pub fn #with_function(mut self, value: #return_type) -> Self {
+                let value : #repr_type = <#return_type as ::bitstuff::ToBits>::to_bits(value).into();
+                self.0 = (self.0 & ! #bitmask_keep_with) | (value  << #start);
+                self
+            }
+        }
+    } else {
+        quote! {
+            #(#attr_doc)*
+            #[inline(always)]
+            #(#attr_other)*
+            pub fn #ident(&self) -> ::core::result::Result<#return_type, #to_bits_type> {
+                <#return_type as ::bitstuff::TryFromBits>::try_from_bits(#raw_bits_type)
+            }
+            #[inline(always)]
+            #(#attr_other)*
+            pub fn #with_function(mut self, value: #return_type) -> Self {
+                let value : #repr_type = <#return_type as ::bitstuff::ToBits>::to_bits(value).into();
+                self.0 = (self.0 & ! #bitmask_keep_with) | (value  << #start);
+                self
+            }
+        }
+    })
 }
 
 pub fn process(args: TokenStream, input: ItemStruct) -> TokenStream {
@@ -185,126 +300,21 @@ pub fn process(args: TokenStream, input: ItemStruct) -> TokenStream {
     let mut set_write_bits = 0u128;
     let mut functions = Vec::new();
     let mut field_names = Vec::new();
-    let mut errors = Vec::new();
+    let mut errors = MultipleErrors::new();
     for field in named_fields {
-        let ident = match &field.ident {
-            Some(i) => i,
-            None => {
-                errors.push(
-                    syn::Error::new_spanned(&field, "field needs an ident").to_compile_error(),
-                );
-                continue;
-            }
-        };
-        field_names.push(ident.clone());
-        let return_type = &field.ty;
-        let mut attr_bitset = None;
-        let mut attr_doc = Vec::new();
-        let mut attr_other = Vec::new();
-        for attr in &field.attrs {
-            match attr.path().get_ident().map(Ident::to_string).as_deref() {
-                Some("bitstuff") => {
-                    if attr_bitset.is_some() {
-                        errors.push(
-                            syn::Error::new_spanned(attr, "only one bitstuff attr is supported")
-                                .to_compile_error(),
-                        );
-                    } else {
-                        attr_bitset = Some(attr.clone());
-                    }
-                }
-                Some("doc") => attr_doc.push(attr.clone()),
-                _ => attr_other.push(attr.clone()),
-            }
+        match process_field(
+            field,
+            &mut set_write_bits,
+            &repr_type,
+            repr_bits,
+            &mut field_names,
+        ) {
+            Ok(v) => functions.push(v),
+            Err(e) => errors.combine(e),
         }
-        if attr_bitset.is_none() {
-            errors.push(
-                syn::Error::new_spanned(&field, "must have a single bitstuff attribute")
-                    .to_compile_error(),
-            );
-            continue;
-        }
-        let attr_bitset = attr_bitset.unwrap();
-        let (start, _end, n_bits, is_falliable) = match parse_bitstuff_attr(&attr_bitset, repr_bits)
-        {
-            Ok(v) => v,
-            Err(e) => {
-                errors.push(e.to_compile_error());
-                continue;
-            }
-        };
-        let bitmask_val = bitmask(start, n_bits);
-        let bitmask_keep_with = Lit::Int(LitInt::new(
-            &format!("0b{:b}", bitmask_val),
-            Span::call_site(),
-        ));
-        if set_write_bits & bitmask_val != 0 {
-            errors.push(syn::Error::new_spanned(&field, "overlapping bits").to_compile_error());
-            continue;
-        }
-        set_write_bits |= bitmask_val;
-        let with_function = Ident::new(&format!("with_{ident}"), ident.span());
-        let to_bits_type = Type::Verbatim(
-            proc_macro2::TokenStream::from_str(&format!(
-                "{}{}",
-                match n_bits {
-                    8 | 16 | 32 | 64 | 128 => "::core::primitive::u",
-                    _ => "::bitstuff::ints::u",
-                },
-                n_bits
-            ))
-            .unwrap(),
-        );
-        let raw_bits_type = if !matches!(n_bits, 8 | 16 | 32 | 64 | 128) {
-            proc_macro2::TokenStream::from_str(&format!(
-                "::bitstuff::ints::u{n_bits}::trimmed_new((self.0 >> {start}) as _)"
-            ))
-        } else {
-            proc_macro2::TokenStream::from_str(&format!("(self.0 >> {start}) as _"))
-        }
-        .unwrap();
-        functions.push(if !is_falliable {
-            quote! {
-                #(#attr_doc)*
-                #[inline(always)]
-                #(#attr_other)*
-                pub fn #ident(&self) -> #return_type {
-                    <#return_type as ::bitstuff::FromBits>::from_bits(#raw_bits_type)
-                }
-                #[inline(always)]
-                #(#attr_other)*
-                pub fn #with_function(mut self, value: #return_type) -> Self {
-                    let value : #repr_type = <#return_type as ::bitstuff::ToBits>::to_bits(value).into();
-                    self.0 = (self.0 & ! #bitmask_keep_with) | (value  << #start);
-                    self
-                }
-            }
-        } else {
-            quote! {
-                #(#attr_doc)*
-                #[inline(always)]
-                #(#attr_other)*
-                pub fn #ident(&self) -> ::core::result::Result<#return_type, #to_bits_type> {
-                    <#return_type as ::bitstuff::TryFromBits>::try_from_bits(#raw_bits_type)
-                }
-                #[inline(always)]
-                #(#attr_other)*
-                pub fn #with_function(mut self, value: #return_type) -> Self {
-                    let value : #repr_type = <#return_type as ::bitstuff::ToBits>::to_bits(value).into();
-                    self.0 = (self.0 & ! #bitmask_keep_with) | (value  << #start);
-                    self
-                }
-            }
-        });
     }
-    if !errors.is_empty() {
-        return errors
-            .into_iter()
-            .fold(proc_macro2::TokenStream::new(), |mut acc, e| {
-                acc.extend(e);
-                acc
-            })
-            .into();
+    if let Some(e) = errors.into_inner() {
+        return e.to_compile_error().into();
     }
 
     let out_struct = ItemStruct {
