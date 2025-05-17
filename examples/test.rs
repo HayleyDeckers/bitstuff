@@ -37,11 +37,9 @@ pub struct DataRegister {
     data: u8,
 }
 
-#[bitstuff::stuff(u32)]
+#[bitstuff::stuff]
 #[derive(Default)]
 pub struct InterruptFIFOLevelSelect {
-    #[bitstuff(bit = 31)]
-    test_field: EvenOdd,
     /// Receive interrupt FIFO level select. The trigger points for the receive interrupt are as follows:
     ///
     /// - b000 = Receive FIFO becomes ≥ 1/8 full
@@ -63,6 +61,19 @@ pub struct InterruptFIFOLevelSelect {
     #[bitstuff(bits = 0..=2, falliable)]
     #[allow(non_snake_case)]
     transmit_interrupt_FIFO_level_select: FIFOLevel, //acutally 3 bits
+}
+
+#[bitstuff::stuff]
+#[derive(Default)]
+struct Nested {
+    #[bitstuff(bits = 0..6)]
+    test: InterruptFIFOLevelSelect,
+    #[bitstuff(bits = 11..17)]
+    test2: InterruptFIFOLevelSelect,
+    #[bitstuff(bits = 17..25)]
+    test3: FullU8,
+    #[bitstuff(bit = 25)]
+    test4: EvenOdd,
 }
 
 #[bitstuff::stuff(u32, bits = 3)]
@@ -90,6 +101,38 @@ pub enum EvenOdd {
     #[default]
     Even = 0,
     Odd = 1,
+}
+
+fn main() {
+    println!(
+        "{:#?}",
+        DataRegister::default()
+            .with_data(0xaf_u8)
+            .with_framing_error(true)
+            .with_parity_error(true)
+            .with_overrun_error(false)
+            .with_break_error(true)
+    );
+
+    // println!("{:#?}", InterruptFIFOLevelSelect(0xFFFFFFFF));
+    println!(
+        "{:#?}",
+        InterruptFIFOLevelSelect::default()
+            .with_receive_interrupt_FIFO_level_select(FIFOLevel::HalfwayFull)
+            .with_transmit_interrupt_FIFO_level_select(FIFOLevel::OneFourthFull) // .with_test_field(EvenOdd::Odd)
+    );
+
+    println!("{:#?}", FullU8::default());
+
+    use ::bitstuff::ToBits;
+    let nested = Nested::default()
+        .with_test(InterruptFIFOLevelSelect::default())
+        .with_test2(InterruptFIFOLevelSelect::default())
+        .with_test3(FullU8::X0x01)
+        .with_test4(EvenOdd::Even)
+        .to_bits();
+    // this should be u26
+    println!("{:#?}", nested);
 }
 
 #[bitstuff::stuff]
@@ -352,27 +395,4 @@ enum FullU8 {
     #[default]
     X0xfe = 254,
     X0xff = 255,
-}
-
-fn main() {
-    println!(
-        "{:#?}",
-        DataRegister::default()
-            .with_data(0xaf_u8)
-            .with_framing_error(true)
-            .with_parity_error(true)
-            .with_overrun_error(false)
-            .with_break_error(true)
-    );
-
-    println!("{:#?}", InterruptFIFOLevelSelect(0xFFFFFFFF));
-    println!(
-        "{:#?}",
-        InterruptFIFOLevelSelect::default()
-            .with_receive_interrupt_FIFO_level_select(FIFOLevel::HalfwayFull)
-            .with_transmit_interrupt_FIFO_level_select(FIFOLevel::OneFourthFull)
-            .with_test_field(EvenOdd::Odd)
-    );
-
-    println!("{:#?}", FullU8::default());
 }
