@@ -160,6 +160,7 @@ pub fn process_field(
     let mut attr_bitset = None;
     let mut attr_doc = Vec::new();
     let mut attr_other = Vec::new();
+    let mut inline_attr = None;
     for attr in &field.attrs {
         match attr.path().get_ident().map(Ident::to_string).as_deref() {
             Some("bitstuff") => {
@@ -173,9 +174,17 @@ pub fn process_field(
                 }
             }
             Some("doc") => attr_doc.push(attr.clone()),
+            Some("inline") => inline_attr = Some(attr.clone()),
             _ => attr_other.push(attr.clone()),
         }
     }
+    let inline_attr = inline_attr
+        .map(|attr| attr.into_token_stream())
+        .unwrap_or_else(|| {
+            quote_spanned! {field.span() =>
+                #[inline(always)]
+            }
+        });
     if attr_bitset.is_none() {
         return Err(syn::Error::new_spanned(
             &field,
@@ -221,12 +230,12 @@ pub fn process_field(
     Ok(if !is_falliable {
         quote_spanned! {field.span() =>
             #(#attr_doc)*
-            #[inline(always)]
+            #inline_attr
             #(#attr_other)*
             pub fn #ident(&self) -> #return_type {
                 <#return_type as ::bitstuff::FromBits>::from_bits(#raw_bits_type)
             }
-            #[inline(always)]
+            #inline_attr
             #(#attr_other)*
             pub fn #with_function(mut self, value: #return_type) -> Self {
                 let value : #repr_type = <#return_type as ::bitstuff::ToBits>::to_bits(value).into();
@@ -237,12 +246,12 @@ pub fn process_field(
     } else {
         quote_spanned! {field.span() =>
             #(#attr_doc)*
-            #[inline(always)]
+            #inline_attr
             #(#attr_other)*
             pub fn #ident(&self) -> ::core::result::Result<#return_type, #to_bits_type> {
                 <#return_type as ::bitstuff::TryFromBits>::try_from_bits(#raw_bits_type)
             }
-            #[inline(always)]
+            #inline_attr
             #(#attr_other)*
             pub fn #with_function(mut self, value: #return_type) -> Self {
                 let value : #repr_type = <#return_type as ::bitstuff::ToBits>::to_bits(value).into();
