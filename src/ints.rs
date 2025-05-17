@@ -1,22 +1,72 @@
 #![allow(non_camel_case_types)]
 
 pub mod implementation {
-    use core::ops::Deref;
-    use core::panic;
+    use core::{fmt::Debug, ops::Deref};
+    use core::{fmt::Display, panic};
 
     use crate::BitRepr;
     //standard bit types that can contain 0..2^BITS
     // we might also want to a variant which can contain 0..=MAX which is used for some peripherals like AUX_MU_STAT_REG on bcm2711
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[derive(Clone, Copy, PartialEq, Eq)]
     pub struct B8<const BITS: u8>(u8);
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    impl<const BITS: u8> Debug for B8<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "B8<{BITS}>({})", self.0)
+        }
+    }
+    impl<const BITS: u8> Display for B8<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "{}u{BITS}", self.0)
+        }
+    }
+    #[derive(Clone, Copy, PartialEq, Eq)]
     pub struct B16<const BITS: u8>(u16);
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    impl<const BITS: u8> Debug for B16<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "B16<{BITS}>({})", self.0)
+        }
+    }
+    impl<const BITS: u8> Display for B16<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "{}u{BITS}", self.0)
+        }
+    }
+    #[derive(Clone, Copy, PartialEq, Eq)]
     pub struct B32<const BITS: u8>(u32);
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    impl<const BITS: u8> Debug for B32<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "B32<{BITS}>({})", self.0)
+        }
+    }
+    impl<const BITS: u8> Display for B32<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "{}u{BITS}", self.0)
+        }
+    }
+    #[derive(Clone, Copy, PartialEq, Eq)]
     pub struct B64<const BITS: u8>(u64);
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    impl<const BITS: u8> Debug for B64<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "B64<{BITS}>({})", self.0)
+        }
+    }
+    impl<const BITS: u8> Display for B64<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "{}u{BITS}", self.0)
+        }
+    }
+    #[derive(Clone, Copy, PartialEq, Eq)]
     pub struct B128<const BITS: u8>(u128);
+    impl<const BITS: u8> Debug for B128<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "B128<{BITS}>({})", self.0)
+        }
+    }
+    impl<const BITS: u8> Display for B128<BITS> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "{}u{BITS}", self.0)
+        }
+    }
 
     impl<const BITS: u8> From<B8<BITS>> for u8 {
         fn from(value: B8<BITS>) -> Self {
