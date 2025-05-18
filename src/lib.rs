@@ -140,3 +140,73 @@ impl ToBits for NonZeroU128 {
         self.get()
     }
 }
+
+impl BitRepr for Option<NonZeroU8> {
+    type BitRepr = u8;
+}
+impl FromBits for Option<NonZeroU8> {
+    fn from_bits(bits: u8) -> Self {
+        NonZeroU8::new(bits)
+    }
+}
+impl ToBits for Option<NonZeroU8> {
+    fn to_bits(self) -> u8 {
+        self.map_or(0, |v| v.get())
+    }
+}
+
+impl BitRepr for Option<NonZeroU16> {
+    type BitRepr = u16;
+}
+impl FromBits for Option<NonZeroU16> {
+    fn from_bits(bits: u16) -> Self {
+        NonZeroU16::new(bits)
+    }
+}
+impl ToBits for Option<NonZeroU16> {
+    fn to_bits(self) -> u16 {
+        self.map_or(0, |v| v.get())
+    }
+}
+
+impl BitRepr for Option<NonZeroU32> {
+    type BitRepr = u32;
+}
+impl FromBits for Option<NonZeroU32> {
+    fn from_bits(bits: u32) -> Self {
+        NonZeroU32::new(bits)
+    }
+}
+impl ToBits for Option<NonZeroU32> {
+    fn to_bits(self) -> u32 {
+        self.map_or(0, |v| v.get())
+    }
+}
+
+impl BitRepr for Option<NonZeroU64> {
+    type BitRepr = u64;
+}
+impl FromBits for Option<NonZeroU64> {
+    fn from_bits(bits: u64) -> Self {
+        NonZeroU64::new(bits)
+    }
+}
+impl ToBits for Option<NonZeroU64> {
+    fn to_bits(self) -> u64 {
+        self.map_or(0, |v| v.get())
+    }
+}
+
+impl BitRepr for Option<NonZeroU128> {
+    type BitRepr = u128;
+}
+impl FromBits for Option<NonZeroU128> {
+    fn from_bits(bits: u128) -> Self {
+        NonZeroU128::new(bits)
+    }
+}
+impl ToBits for Option<NonZeroU128> {
+    fn to_bits(self) -> u128 {
+        self.map_or(0, |v| v.get())
+    }
+}
