@@ -129,10 +129,11 @@ fn main() {
         .with_test(InterruptFIFOLevelSelect::default())
         .with_test2(InterruptFIFOLevelSelect::default())
         .with_test3(FullU8::X0x01)
-        .with_test4(EvenOdd::Even)
-        .to_bits();
+        .with_test4(EvenOdd::Even);
+
     // this should be u26
-    println!("{:#?}", nested);
+    println!("{nested:#?}");
+    println!("Nested bits: {:?}", nested.to_bits());
 }
 
 #[bitstuff::stuff]

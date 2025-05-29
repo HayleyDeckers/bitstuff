@@ -7,7 +7,7 @@ pub mod implementation {
     use crate::BitRepr;
     //standard bit types that can contain 0..2^BITS
     // we might also want to a variant which can contain 0..=MAX which is used for some peripherals like AUX_MU_STAT_REG on bcm2711
-    #[derive(Clone, Copy, PartialEq, Eq)]
+    #[derive(Default, Clone, Copy, PartialEq, Eq)]
     pub struct B8<const BITS: u8>(u8);
     impl<const BITS: u8> Debug for B8<BITS> {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -19,7 +19,7 @@ pub mod implementation {
             write!(f, "{}u{BITS}", self.0)
         }
     }
-    #[derive(Clone, Copy, PartialEq, Eq)]
+    #[derive(Default, Clone, Copy, PartialEq, Eq)]
     pub struct B16<const BITS: u8>(u16);
     impl<const BITS: u8> Debug for B16<BITS> {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -31,7 +31,7 @@ pub mod implementation {
             write!(f, "{}u{BITS}", self.0)
         }
     }
-    #[derive(Clone, Copy, PartialEq, Eq)]
+    #[derive(Default, Clone, Copy, PartialEq, Eq)]
     pub struct B32<const BITS: u8>(u32);
     impl<const BITS: u8> Debug for B32<BITS> {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -43,7 +43,7 @@ pub mod implementation {
             write!(f, "{}u{BITS}", self.0)
         }
     }
-    #[derive(Clone, Copy, PartialEq, Eq)]
+    #[derive(Default, Clone, Copy, PartialEq, Eq)]
     pub struct B64<const BITS: u8>(u64);
     impl<const BITS: u8> Debug for B64<BITS> {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -55,7 +55,7 @@ pub mod implementation {
             write!(f, "{}u{BITS}", self.0)
         }
     }
-    #[derive(Clone, Copy, PartialEq, Eq)]
+    #[derive(Default, Clone, Copy, PartialEq, Eq)]
     pub struct B128<const BITS: u8>(u128);
     impl<const BITS: u8> Debug for B128<BITS> {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

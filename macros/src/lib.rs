@@ -35,13 +35,7 @@ impl MultipleErrors {
             }
         }
     }
-    pub fn is_empty(&self) -> bool {
-        self.error.is_none()
-    }
 
-    pub fn into_compile_error(self) -> proc_macro2::TokenStream {
-        self.error.unwrap().into_compile_error()
-    }
     pub fn into_inner(self) -> Option<syn::Error> {
         self.error
     }
